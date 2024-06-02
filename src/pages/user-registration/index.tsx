@@ -207,7 +207,7 @@ const UserRegistration = () => {
               color: "gray.50",
             }}
           >
-            Aadhar Card
+            Aadhaar Card
           </FormLabel>
 
           <Input onChange={(e) => uploadFile(e.target.files)} type="file" />
