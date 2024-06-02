@@ -1,7 +1,7 @@
 {
   "sites": [
     {
-      "slug": "quick-helmet-shrilling",
+      "slug": "huge-agency-round",
       "distDir": "out",
       "buildCommand": "yarn run build"
     }
