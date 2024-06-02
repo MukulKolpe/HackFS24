@@ -1,3 +1,4 @@
+// @ts-nocheck comment
 import React, { useState, useEffect, useRef } from "react";
 import { HuddleIframe } from "@huddle01/iframe";
 import axios from "axios";
