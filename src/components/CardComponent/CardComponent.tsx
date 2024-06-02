@@ -28,6 +28,15 @@ import { ParticleProvider } from "@particle-network/provider";
 import { useSigner } from "wagmi";
 import { useToast } from "@chakra-ui/react";
 import documentabi from "../../utils/doctorsideabi.json";
+import * as LitJsSdk from "@lit-protocol/lit-node-client";
+import { LitNetwork } from "@lit-protocol/constants";
+import {
+  LitAccessControlConditionResource,
+  createSiweMessageWithRecaps,
+  generateAuthSig,
+  LitActionResource,
+} from "@lit-protocol/auth-helpers";
+import { LitAbility, AuthCallbackParams } from "@lit-protocol/types";
 
 const CardComponent = ({ sysUser, signal }) => {
   const age = sysUser.userAge.toNumber();
@@ -36,6 +45,8 @@ const CardComponent = ({ sysUser, signal }) => {
 
   const [size, setSize] = useState("md");
   const [adharsize, setAdharSize] = useState("md");
+  const [decryptedAdhar, setDecryptedAdhar] = useState("");
+  const [decryptedDegree, setDecryptedDegree] = useState("");
   const {
     isOpen: isEditOpen,
     onOpen: onEditOpen,
@@ -47,17 +58,181 @@ const CardComponent = ({ sysUser, signal }) => {
     onClose: onDeleteClose,
   } = useDisclosure();
 
-  const handleSizeClick = (newSize) => {
+  const handleSizeClick = async (newSize) => {
+    await handleDecryptDegree(sysUser[8]);
     setSize(newSize);
     onEditOpen();
   };
 
-  const handleSizeClick2 = (newSize) => {
+  const handleSizeClick2 = async (newSize) => {
+    await handleDecryptAdhar(sysUser[2]);
     setSize(newSize);
     onDeleteOpen();
   };
 
   const toast = useToast();
+
+  const handleDecryptAdhar = async (stringToDecrypt) => {
+    const accessControlConditions = [
+      {
+        contractAddress: "",
+        standardContractType: "",
+        chain: "sepolia",
+        method: "eth_getBalance",
+        parameters: [":userAddress", "latest"],
+        returnValueTest: {
+          comparator: ">=",
+          value: "1000000000000", // 0.000001 ETH
+        },
+      },
+    ];
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const ethAccounts = await provider.send("eth_requestAccounts", []);
+    const ethersSigner = provider.getSigner();
+    const litNodeClient = new LitJsSdk.LitNodeClient({
+      litNetwork: LitNetwork.Cayenne,
+    });
+    await litNodeClient.connect();
+
+    var nameArr = stringToDecrypt.split(" ");
+    var ciphertext = nameArr[0];
+    var dataToEncryptHash = nameArr[1];
+    console.log(ciphertext);
+    console.log(dataToEncryptHash);
+
+    console.log("decrypting...");
+    const accsResourceString =
+      await LitAccessControlConditionResource.generateResourceString(
+        accessControlConditions,
+        dataToEncryptHash
+      );
+    console.log(accsResourceString);
+
+    const sessionSigs = await litNodeClient.getSessionSigs({
+      chain: "sepolia",
+      expiration: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // 24 hours
+      resourceAbilityRequests: [
+        {
+          resource: new LitAccessControlConditionResource(accsResourceString),
+          ability: LitAbility.AccessControlConditionDecryption,
+        },
+      ],
+      authNeededCallback: async ({
+        resourceAbilityRequests,
+        expiration,
+        uri,
+      }) => {
+        const toSign = await createSiweMessageWithRecaps({
+          uri,
+          expiration,
+          resources: resourceAbilityRequests,
+          walletAddress: await ethersSigner.getAddress(),
+          nonce: await litNodeClient.getLatestBlockhash(),
+          litNodeClient,
+        });
+
+        return await generateAuthSig({
+          signer: ethersSigner,
+          toSign,
+        });
+      },
+    });
+    console.log(sessionSigs);
+    const decryptRes = await LitJsSdk.decryptToString(
+      {
+        accessControlConditions: accessControlConditions,
+        ciphertext: ciphertext,
+        dataToEncryptHash: dataToEncryptHash,
+        sessionSigs: sessionSigs,
+        chain: "sepolia",
+      },
+      litNodeClient
+    );
+
+    console.log("✅ decryptRes:", decryptRes);
+    setDecryptedAdhar(decryptRes);
+  };
+
+  const handleDecryptDegree = async (stringToDecrypt) => {
+    const accessControlConditions = [
+      {
+        contractAddress: "",
+        standardContractType: "",
+        chain: "sepolia",
+        method: "eth_getBalance",
+        parameters: [":userAddress", "latest"],
+        returnValueTest: {
+          comparator: ">=",
+          value: "1000000000000", // 0.000001 ETH
+        },
+      },
+    ];
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const ethAccounts = await provider.send("eth_requestAccounts", []);
+    const ethersSigner = provider.getSigner();
+    const litNodeClient = new LitJsSdk.LitNodeClient({
+      litNetwork: LitNetwork.Cayenne,
+    });
+    await litNodeClient.connect();
+
+    var nameArr = stringToDecrypt.split(" ");
+    var ciphertext = nameArr[0];
+    var dataToEncryptHash = nameArr[1];
+    console.log(ciphertext);
+    console.log(dataToEncryptHash);
+
+    console.log("decrypting...");
+    const accsResourceString =
+      await LitAccessControlConditionResource.generateResourceString(
+        accessControlConditions,
+        dataToEncryptHash
+      );
+    console.log(accsResourceString);
+
+    const sessionSigs = await litNodeClient.getSessionSigs({
+      chain: "sepolia",
+      expiration: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // 24 hours
+      resourceAbilityRequests: [
+        {
+          resource: new LitAccessControlConditionResource(accsResourceString),
+          ability: LitAbility.AccessControlConditionDecryption,
+        },
+      ],
+      authNeededCallback: async ({
+        resourceAbilityRequests,
+        expiration,
+        uri,
+      }) => {
+        const toSign = await createSiweMessageWithRecaps({
+          uri,
+          expiration,
+          resources: resourceAbilityRequests,
+          walletAddress: await ethersSigner.getAddress(),
+          nonce: await litNodeClient.getLatestBlockhash(),
+          litNodeClient,
+        });
+
+        return await generateAuthSig({
+          signer: ethersSigner,
+          toSign,
+        });
+      },
+    });
+    console.log(sessionSigs);
+    const decryptRes = await LitJsSdk.decryptToString(
+      {
+        accessControlConditions: accessControlConditions,
+        ciphertext: ciphertext,
+        dataToEncryptHash: dataToEncryptHash,
+        sessionSigs: sessionSigs,
+        chain: "sepolia",
+      },
+      litNodeClient
+    );
+
+    console.log("✅ decryptRes:", decryptRes);
+    setDecryptedDegree(decryptRes);
+  };
 
   const approveUser = async () => {
     if (window.ethereum._state.accounts?.length !== 0) {
@@ -93,6 +268,7 @@ const CardComponent = ({ sysUser, signal }) => {
       });
     }
   };
+
   return (
     <div>
       <Center py={6}>
@@ -201,7 +377,7 @@ const CardComponent = ({ sysUser, signal }) => {
                 <ModalBody>
                   {role == 2 ? (
                     <Image
-                      src={`https://gateway.lighthouse.storage/ipfs/${sysUser[8]}`}
+                      src={`https://gateway.lighthouse.storage/ipfs/${decryptedDegree}`}
                     ></Image>
                   ) : (
                     <Text>User and other 3rd parties do not need a degree</Text>
@@ -220,7 +396,7 @@ const CardComponent = ({ sysUser, signal }) => {
                 <ModalCloseButton />
                 <ModalBody>
                   <Image
-                    src={`https://gateway.lighthouse.storage/ipfs/${sysUser[2]}`}
+                    src={`https://gateway.lighthouse.storage/ipfs/${decryptedAdhar}`}
                   ></Image>
                 </ModalBody>
                 <ModalFooter>

@@ -164,7 +164,11 @@ const Admin = () => {
               sysUsers.map((sysUser: any, index: any) => {
                 return (
                   <GridItem rowSpan={1} colSpan={1}>
-                    <CardComponent sysUser={sysUser} signal={0} />
+                    <CardComponent
+                      key={Number(sysUser[0])}
+                      sysUser={sysUser}
+                      signal={0}
+                    />
                   </GridItem>
                 );
               })}
@@ -182,7 +186,11 @@ const Admin = () => {
                 .map((sysUser: any, index: any) => {
                   return (
                     <GridItem rowSpan={1} colSpan={1}>
-                      <CardComponent sysUser={sysUser} signal={1} />
+                      <CardComponent
+                        key={Number(sysUser[0])}
+                        sysUser={sysUser}
+                        signal={1}
+                      />
                     </GridItem>
                   );
                 })}
@@ -200,7 +208,11 @@ const Admin = () => {
                 .map((sysUser: any, index: any) => {
                   return (
                     <GridItem rowSpan={1} colSpan={1}>
-                      <CardComponent sysUser={sysUser} signal={0} />
+                      <CardComponent
+                        key={Number(sysUser[0])}
+                        sysUser={sysUser}
+                        signal={0}
+                      />
                     </GridItem>
                   );
                 })}
@@ -220,7 +232,11 @@ const Admin = () => {
                 .map((sysUser: any, index: any) => {
                   return (
                     <GridItem rowSpan={1} colSpan={1}>
-                      <CardComponent sysUser={sysUser} signal={0} />
+                      <CardComponent
+                        key={Number(sysUser[0])}
+                        sysUser={sysUser}
+                        signal={0}
+                      />
                     </GridItem>
                   );
                 })}
@@ -240,7 +256,11 @@ const Admin = () => {
                 .map((sysUser: any, index: any) => {
                   return (
                     <GridItem rowSpan={1} colSpan={1}>
-                      <CardComponent sysUser={sysUser} signal={0} />
+                      <CardComponent
+                        key={Number(sysUser[0])}
+                        sysUser={sysUser}
+                        signal={0}
+                      />
                     </GridItem>
                   );
                 })}
@@ -260,7 +280,11 @@ const Admin = () => {
                 .map((sysUser: any, index: any) => {
                   return (
                     <GridItem rowSpan={1} colSpan={1}>
-                      <CardComponent sysUser={sysUser} signal={0} />
+                      <CardComponent
+                        key={Number(sysUser[0])}
+                        sysUser={sysUser}
+                        signal={0}
+                      />
                     </GridItem>
                   );
                 })}
@@ -280,7 +304,11 @@ const Admin = () => {
                 .map((sysUser: any, index: any) => {
                   return (
                     <GridItem rowSpan={1} colSpan={1}>
-                      <CardComponent sysUser={sysUser} signal={0} />
+                      <CardComponent
+                        key={Number(sysUser[0])}
+                        sysUser={sysUser}
+                        signal={0}
+                      />
                     </GridItem>
                   );
                 })}

@@ -62,6 +62,8 @@ export default function Profile() {
   const [modalAppId, setModalAppId] = useState(0);
   const [modalFeedBack, setModalFeedback] = useState("");
   const router = useRouter();
+  const [decryptedURI, setDecryptedURI] = useState("");
+
   useEffect(() => {
     if (window.ethereum._state.accounts?.length !== 0) {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -100,6 +102,87 @@ export default function Profile() {
     }
   }, []);
 
+  const decryptPatientReport = async (stringToDecrypt) => {
+    const accessControlConditions = [
+      {
+        contractAddress: "",
+        standardContractType: "",
+        chain: "sepolia",
+        method: "eth_getBalance",
+        parameters: [":userAddress", "latest"],
+        returnValueTest: {
+          comparator: ">=",
+          value: "1000000000000", // 0.000001 ETH
+        },
+      },
+    ];
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const ethAccounts = await provider.send("eth_requestAccounts", []);
+    const ethersSigner = provider.getSigner();
+    const litNodeClient = new LitJsSdk.LitNodeClient({
+      litNetwork: LitNetwork.Cayenne,
+    });
+    await litNodeClient.connect();
+
+    var nameArr = stringToDecrypt.split(" ");
+    var ciphertext = nameArr[0];
+    var dataToEncryptHash = nameArr[1];
+    console.log(ciphertext);
+    console.log(dataToEncryptHash);
+
+    console.log("decrypting...");
+    const accsResourceString =
+      await LitAccessControlConditionResource.generateResourceString(
+        accessControlConditions,
+        dataToEncryptHash
+      );
+    console.log(accsResourceString);
+
+    const sessionSigs = await litNodeClient.getSessionSigs({
+      chain: "sepolia",
+      expiration: new Date(Date.now() + 1000 * 60 * 60 * 24).toISOString(), // 24 hours
+      resourceAbilityRequests: [
+        {
+          resource: new LitAccessControlConditionResource(accsResourceString),
+          ability: LitAbility.AccessControlConditionDecryption,
+        },
+      ],
+      authNeededCallback: async ({
+        resourceAbilityRequests,
+        expiration,
+        uri,
+      }) => {
+        const toSign = await createSiweMessageWithRecaps({
+          uri,
+          expiration,
+          resources: resourceAbilityRequests,
+          walletAddress: await ethersSigner.getAddress(),
+          nonce: await litNodeClient.getLatestBlockhash(),
+          litNodeClient,
+        });
+
+        return await generateAuthSig({
+          signer: ethersSigner,
+          toSign,
+        });
+      },
+    });
+    console.log(sessionSigs);
+    const decryptRes = await LitJsSdk.decryptToString(
+      {
+        accessControlConditions: accessControlConditions,
+        ciphertext: ciphertext,
+        dataToEncryptHash: dataToEncryptHash,
+        sessionSigs: sessionSigs,
+        chain: "sepolia",
+      },
+      litNodeClient
+    );
+
+    console.log("✅ decryptRes:", decryptRes);
+    //setDecryptedDegree(decryptRes);
+  };
+
   const getPatientAppointments = async () => {
     if (window.ethereum._state.accounts?.length !== 0) {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
@@ -133,7 +216,7 @@ export default function Profile() {
     }
   };
 
-  const getAllDocs = () => {
+  const getAllDocs = async () => {
     if (window.ethereum._state.accounts?.length !== 0) {
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
@@ -154,6 +237,11 @@ export default function Profile() {
           let docdata = contract.patientIdtoReport(userid, i);
 
           docdata.then((res) => {
+            const tempDecryptedURI = decryptPatientReport(res[4]);
+            tempDecryptedURI.then((resData) => {
+              res[4] = resData;
+            });
+            res[4] = tempDecryptedURI;
             setDocs((prevState) => [...prevState, res]);
           });
         }
