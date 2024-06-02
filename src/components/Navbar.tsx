@@ -36,40 +36,48 @@ export default function Navbar() {
   const [address, setAddress] = useState("");
 
   useEffect(() => {
-    if (window.ethereum._state.accounts?.length !== 0) {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const contract = new ethers.Contract(
-        process.env.NEXT_PUBLIC_DOCTORSIDE_ADDRESS,
-        doctorsideabi,
-        signer
-      );
-      const accounts = provider.listAccounts();
+    try {
+      if (window.ethereum._state.accounts?.length !== 0) {
+        const provider = new ethers.providers.Web3Provider(window.ethereum);
+        const signer = provider.getSigner();
+        const contract = new ethers.Contract(
+          process.env.NEXT_PUBLIC_DOCTORSIDE_ADDRESS,
+          doctorsideabi,
+          signer
+        );
+        const accounts = provider.listAccounts();
 
-      accounts.then((account) => {
-        const res = contract.userWalletAddresstoUserId(account[0]);
-        setAddress(account[0]);
-        console.log("Address:", account[0]);
-        let length;
-        let userId;
-        res.then((id) => {
-          userId = id.toNumber();
+        accounts.then((account) => {
+          const res = contract.userWalletAddresstoUserId(account[0]);
+          setAddress(account[0]);
+          console.log("Address:", account[0]);
+          let length;
+          let userId;
+          res.then((id) => {
+            userId = id.toNumber();
 
-          setUserid(userId);
-          const role = contract.userIdtoUser(userId);
-          role.then((res) => {
-            let numRole = res.userRole.toNumber();
-            setRole(numRole);
-            console.log("Role:", numRole);
+            setUserid(userId);
+            const role = contract.userIdtoUser(userId);
+            role.then((res) => {
+              let numRole = res.userRole.toNumber();
+              setRole(numRole);
+              console.log("Role:", numRole);
+            });
           });
         });
-      });
+      }
+    } catch (e) {
+      console.log(e);
     }
   }, [address, role, userid]);
   useEffect(() => {
-    window.ethereum.on("accountsChanged", function () {
-      window.location.reload();
-    });
+    try {
+      window.ethereum.on("accountsChanged", function () {
+        window.location.reload();
+      });
+    } catch (e) {
+      console.log(e);
+    }
   }, [address, role]);
   return (
     <>
