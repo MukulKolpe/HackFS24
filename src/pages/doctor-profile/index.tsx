@@ -54,6 +54,8 @@ import {
 import { useToast } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
 import lighthouse from "@lighthouse-web3/sdk";
+import * as LitJsSdk from "@lit-protocol/lit-node-client";
+import { LitNetwork } from "@lit-protocol/constants";
 
 interface DataProps {
   heading: string;
@@ -363,8 +365,51 @@ const index = () => {
     }
   };
 
+  const encryptReport = async (message) => {
+    const accessControlConditions = [
+      {
+        contractAddress: "",
+        standardContractType: "",
+        chain: "sepolia",
+        method: "eth_getBalance",
+        parameters: [":userAddress", "latest"],
+        returnValueTest: {
+          comparator: ">=",
+          value: "1000000000000", // 0.000001 ETH
+        },
+      },
+    ];
+    const provider = new ethers.providers.Web3Provider(window.ethereum);
+    const ethAccounts = await provider.send("eth_requestAccounts", []);
+    const ethersSigner = provider.getSigner();
+    const litNodeClient = new LitJsSdk.LitNodeClient({
+      litNetwork: LitNetwork.Cayenne,
+    });
+    await litNodeClient.connect();
+
+    console.log("encrypting data...");
+    const { ciphertext, dataToEncryptHash } = await LitJsSdk.encryptString(
+      {
+        accessControlConditions,
+        dataToEncrypt: message,
+      },
+      litNodeClient
+    );
+    // console.log(ciphertext);
+    // console.log(dataToEncryptHash);
+    let retString = "";
+    retString += ciphertext;
+    retString += " ";
+    retString += dataToEncryptHash;
+    retString = retString.toString();
+    // console.log(retString);
+    return retString;
+  };
+
   const uploadPatientReport = async (patientWallet, doctorWallet) => {
     if (window.ethereum._state.accounts?.length !== 0) {
+      const encryptedURI = await encryptReport(ipfsUrl);
+      console.log(encryptedURI);
       const provider = new ethers.providers.Web3Provider(window.ethereum);
       const signer = provider.getSigner();
       const contract = new ethers.Contract(
@@ -379,7 +424,7 @@ const index = () => {
         reportName,
         patientWallet,
         doctorWallet,
-        ipfsUrl
+        encryptedURI
       );
       toast({
         title: "Document is being uploaded",
