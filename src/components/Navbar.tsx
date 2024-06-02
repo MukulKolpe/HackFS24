@@ -103,7 +103,7 @@ export default function Navbar() {
             ml="2"
             color="brand.00"
           >
-            <Link href="/">HackFS24</Link>
+            <Link href="/">MedLIT</Link>
           </HStack>
           <Flex alignItems={"center"}>
             <div style={{ display: "flex" }}>
