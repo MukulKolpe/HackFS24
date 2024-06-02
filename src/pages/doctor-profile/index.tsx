@@ -52,6 +52,7 @@ import {
 } from "@chakra-ui/react";
 import { useToast } from "@chakra-ui/react";
 import { useRouter } from "next/navigation";
+import lighthouse from "@lighthouse-web3/sdk";
 
 interface DataProps {
   heading: string;
@@ -86,7 +87,6 @@ const index = () => {
   const [appSignal, setAppSignal] = useState(false);
   const { isOpen, onOpen, onClose } = useDisclosure();
   const inputRef = useRef(null);
-  const [displayImage, setDisplayImage] = useState();
   const [ipfsUrl, setIpfsUrl] = useState("");
   const [reportName, setReportName] = useState("");
   const [clientMail, setClientMail] = useState("");
@@ -96,53 +96,40 @@ const index = () => {
   const [modalPatientName, setModalPatientName] = useState("");
   const [modalAppointmentDateTime, setModalAppointmentDateTime] = useState("");
   const [modalPatientWallet, setModalPatientWallet] = useState("");
+
   // doctor email: - doctorInfo.userEmail
   // patient email: -
 
-  const changeHandler = () => {
-    setDisplayImage(inputRef.current?.files[0]);
+  const progressCallback = (progressData) => {
+    let percentageDone =
+      100 - (progressData?.total / progressData?.uploaded)?.toFixed(2);
+    console.log(percentageDone);
   };
 
-  const uploadIPFS = async () => {
-    const form = new FormData();
-    form.append("file", displayImage ? displayImage : "");
+  const uploadFile = async (file) => {
+    const output = await lighthouse.upload(
+      file,
+      process.env.NEXT_PUBLIC_LIGHTHOUSE_API_KEY,
+      false,
+      null,
+      progressCallback
+    );
+    console.log("File Status:", output);
 
-    const options = {
-      method: "POST",
-      body: form,
-      headers: {
-        Authorization: process.env.NEXT_PUBLIC_NFTPort_API_KEY,
-      },
-    };
+    setIpfsUrl(output.data.Hash);
 
-    await fetch("https://api.nftport.xyz/v0/files", options)
-      .then((response) => response.json())
-      .then((response) => {
-        // console.log(response);
-        // console.log(response.ipfs_url);
-        setIpfsUrl(response.ipfs_url);
+    toast({
+      title: "Prescription Uploaded to the IPFS.",
+      description: "Congratulations 🎉 ",
+      status: "success",
+      duration: 1000,
+      isClosable: true,
+      position: "top-right",
+    });
 
-        if (displayImage) {
-          toast({
-            title: "Display Image Uploaded to the IPFS.",
-            description: "Congratulations 🎉 ",
-            status: "success",
-            duration: 1000,
-            isClosable: true,
-            position: "top-right",
-          });
-        } else {
-          toast({
-            title: "Display Image not Uploaded to the IPFS.",
-            description: "Please attach the degree certificate ",
-            status: "error",
-            duration: 1000,
-            isClosable: true,
-            position: "top-right",
-          });
-        }
-      })
-      .catch((err) => console.error(err));
+    console.log(
+      "Visit at https://gateway.lighthouse.storage/ipfs/" + output.data.Hash
+    );
   };
 
   const loadDoctorinfo = async () => {
@@ -476,92 +463,7 @@ const index = () => {
               />
 
               <FormLabel mt={2}>Upload Document</FormLabel>
-              <Flex
-                mt={1}
-                justify="center"
-                px={6}
-                pt={5}
-                pb={6}
-                borderWidth={2}
-                _dark={{
-                  color: "gray.500",
-                }}
-                borderStyle="dashed"
-                rounded="md"
-              >
-                <Stack spacing={1} textAlign="center">
-                  <Icon
-                    mx="auto"
-                    boxSize={12}
-                    color="gray.400"
-                    _dark={{
-                      color: "gray.500",
-                    }}
-                    stroke="currentColor"
-                    fill="none"
-                    viewBox="0 0 48 48"
-                    aria-hidden="true"
-                  >
-                    <path
-                      d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02"
-                      strokeWidth="2"
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                    />
-                  </Icon>
-                  <Text>{displayImage?.name}</Text>
-                  <Flex
-                    fontSize="sm"
-                    color="gray.600"
-                    _dark={{
-                      color: "gray.400",
-                    }}
-                    alignItems="baseline"
-                  >
-                    <chakra.label
-                      htmlFor="file-upload"
-                      cursor="pointer"
-                      rounded="md"
-                      fontSize="md"
-                      color="brand.600"
-                      _dark={{
-                        color: "brand.200",
-                      }}
-                      pos="relative"
-                      _hover={{
-                        color: "brand.400",
-                        _dark: {
-                          color: "brand.300",
-                        },
-                      }}
-                    >
-                      <span>Upload Prescription</span>
-                      <VisuallyHidden>
-                        <input
-                          id="file-upload"
-                          name="file-upload"
-                          type="file"
-                          ref={inputRef}
-                          onChange={changeHandler}
-                        />
-                      </VisuallyHidden>
-                    </chakra.label>
-                    <Text pl={1}>or drag and drop</Text>
-                  </Flex>
-                  <Text
-                    fontSize="xs"
-                    color="gray.500"
-                    _dark={{
-                      color: "gray.50",
-                    }}
-                  >
-                    PNG, JPG, GIF up to 10MB
-                  </Text>
-                  <Button onClick={uploadIPFS} mt="2%">
-                    Upload to IPFS
-                  </Button>
-                </Stack>
-              </Flex>
+              <Input onChange={(e) => uploadFile(e.target.files)} type="file" />
             </FormControl>
           </ModalBody>
 
